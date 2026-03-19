@@ -1,0 +1,24 @@
+{
+  "name": "javascript_lessons",
+  "version": "1.0.0",
+  "description": "",
+  "main": "lesson1.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://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@github.com/fredjayson348-art/javascript-lessons.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/fredjayson348-art/javascript-lessons/issues"
+  },
+  "homepage": "https://github.com/fredjayson348-art/javascript-lessons#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
