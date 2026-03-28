@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Tracker</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 500px; margin: 40px auto; padding: 0 20px; background: #111; color: #fff; }
+    h1 { color: #00ffcc; }
+    input { padding: 8px; margin: 5px; border-radius: 5px; border: none; width: 45%; }
+    button { padding: 8px 16px; background: #00ffcc; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+    .student { background: #1e1e1e; padding: 10px; margin: 8px 0; border-radius: 8px; display: flex; justify-content: space-between; }
+    .del { background: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+    #msg { color: #00ffcc; margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <h1>Student Tracker</h1>
+  <input type="text" id="name" placeholder="Name">
+  <input type="number" id="grade" placeholder="Grade">
+  <button onclick="addStudent()">Add</button>
+  <p id="msg"></p>
+  <div id="list"></div>
+
+  <script>
+    async function loadStudents() {
+      const res = await fetch('/api/students');
+      const students = await res.json();
+      const list = document.getElementById('list');
+      list.innerHTML = '';
+      if (students.length === 0) {
+        list.innerHTML = '<p>No students yet.</p>';
+        return;
+      }
+      students.forEach(s => {
+        list.innerHTML += `
+          <div class="student">
+            <span>${s.name} — ${s.grade}/100</span>
+            <button class="del" onclick="deleteStudent(${s.id})">X</button>
+          </div>`;
+      });
+    }
+
+    async function addStudent() {
+      const name = document.getElementById('name').value;
+      const grade = parseInt(document.getElementById('grade').value);
+      const msg = document.getElementById('msg');
+      if (!name || isNaN(grade)) {
+        msg.style.color = '#ff4444';
+        msg.textContent = 'Fill in both fields!';
+        return;
+      }
+      const res = await fetch('/api/students', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, grade })
+      });
+      const data = await res.json();
+      msg.style.color = '#00ffcc';
+      msg.textContent = data.message || data.error;
+      document.getElementById('name').value = '';
+      document.getElementById('grade').value = '';
+      loadStudents();
+    }
+
+    async function deleteStudent(id) {
+      await fetch(`/api/students/${id}`, { method: 'DELETE' });
+      loadStudents();
+    }
+
+    loadStudents();
+  </script>
+</body>
+</html>
