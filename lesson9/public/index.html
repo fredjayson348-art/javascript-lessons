@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Tracker Pro</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #0d0d0d; color: #fff; padding: 20px; }
+    h1 { color: #00ffcc; text-align: center; margin-bottom: 20px; }
+    .card { background: #1a1a1a; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+    input { width: 100%; padding: 10px; margin: 8px 0; border-radius: 6px; border: none; background: #2a2a2a; color: #fff; }
+    button { width: 100%; padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 8px; }
+    .btn-green { background: #00ffcc; color: #000; }
+    .btn-red { background: #ff4444; color: #fff; }
+    .btn-gray { background: #444; color: #fff; }
+    .student { background: #2a2a2a; padding: 10px; border-radius: 8px; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; }
+    .del { background: #ff4444; color: #fff; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+    #msg { text-align: center; margin: 10px 0; font-weight: bold; }
+    #authSection { display: block; }
+    #appSection { display: none; }
+    .tab { display: inline-block; padding: 8px 16px; cursor: pointer; border-radius: 6px; margin-right: 5px; background: #333; }
+    .tab.active { background: #00ffcc; color: #000; }
+  </style>
+</head>
+<body>
+  <h1>Student Tracker Pro</h1>
+
+  <div id="authSection">
+    <div class="card">
+      <span class="tab active" onclick="showTab('login')">Login</span>
+      <span class="tab" onclick="showTab('register')">Register</span>
+      <div id="loginForm">
+        <input type="text" id="loginUser" placeholder="Username">
+        <input type="password" id="loginPass" placeholder="Password">
+        <button class="btn-green" onclick="login()">Login</button>
+      </div>
+      <div id="registerForm" style="display:none">
+        <input type="text" id="regUser" placeholder="Username">
+        <input type="password" id="regPass" placeholder="Password">
+        <button class="btn-green" onclick="register()">Create Account</button>
+      </div>
+      <p id="authMsg" style="text-align:center;margin-top:10px;"></p>
+    </div>
+  </div>
+
+  <div id="appSection">
+    <div class="card">
+      <p id="welcomeMsg"></p>
+      <button class="btn-gray" onclick="logout()">Logout</button>
+    </div>
+    <div class="card">
+      <input type="text" id="name" placeholder="Student name">
+      <input type="number" id="grade" placeholder="Grade (0-100)">
+      <button class="btn-green" onclick="addStudent()">Add Student</button>
+      <p id="msg"></p>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:10px;color:#00ffcc;">All Students</h3>
+      <div id="list"></div>
+    </div>
+  </div>
+
+  <script>
+    let token = localStorage.getItem('token');
+    let username = localStorage.getItem('username');
+
+    if (token) showApp();
+
+    function showTab(tab) {
+      document.getElementById('loginForm').style.display = tab === 'login' ? 'block' : 'none';
+      document.getElementById('registerForm').style.display = tab === 'register' ? 'block' : 'none';
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
+    async function register() {
+      const u = document.getElementById('regUser').value;
+      const p = document.getElementById('regPass').value;
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: u, password: p })
+      });
+      const data = await res.json();
+      document.getElementById('authMsg').textContent = data.message || data.error;
+      document.getElementById('authMsg').style.color = data.error ? '#ff4444' : '#00ffcc';
+    }
+
+    async function login() {
+      const u = document.getElementById('loginUser').value;
+      const p = document.getElementById('loginPass').value;
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: u, password: p })
+      });
+      const data = await res.json();
+      if (data.token) {
+        token = data.token;
+        username = u;
+        localStorage.setItem('token', token);
+        localStorage.setItem('username', username);
+        showApp();
+      } else {
+        document.getElementById('authMsg').textContent = data.error;
+        document.getElementById('authMsg').style.color = '#ff4444';
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      token = null;
+      document.getElementById('authSection').style.display = 'block';
+      document.getElementById('appSection').style.display = 'none';
+    }
+
+    function showApp() {
+      document.getElementById('authSection').style.display = 'none';
+      document.getElementById('appSection').style.display = 'block';
+      document.getElementById('welcomeMsg').textContent = `Welcome, ${username}!`;
+      loadStudents();
+    }
+
+    async function loadStudents() {
+      const res = await fetch('/api/students');
+      const students = await res.json();
+      const list = document.getElementById('list');
+      list.innerHTML = students.length === 0 ? '<p>No students yet.</p>' : '';
+      students.forEach(s => {
+        list.innerHTML += `
+          <div class="student">
+            <span>${s.name} — ${s.grade}/100 <small style="color:#888">(by ${s.addedBy})</small></span>
+            <button class="del" onclick="deleteStudent(${s.id})">X</button>
+          </div>`;
+      });
+    }
+
+    async function addStudent() {
+      const name = document.getElementById('name').value;
+      const grade = parseInt(document.getElementById('grade').value);
+      const msg = document.getElementById('msg');
+      if (!name || isNaN(grade)) { msg.textContent = 'Fill both fields!'; msg.style.color = '#ff4444'; return; }
+      const res = await fetch('/api/students', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'authorization': token },
+        body: JSON.stringify({ name, grade })
+      });
+      const data = await res.json();
+      msg.textContent = data.message || data.error;
+      msg.style.color = data.error ? '#ff4444' : '#00ffcc';
+      document.getElementById('name').value = '';
+      document.getElementById('grade').value = '';
+      loadStudents();
+    }
+
+    async function deleteStudent(id) {
+      await fetch(`/api/students/${id}`, {
+        method: 'DELETE',
+        headers: { 'authorization': token }
+      });
+      loadStudents();
+    }
+  </script>
+</body>
+</html>
